@@ -41,11 +41,11 @@ def preprocess(text: str) -> str:
 
 def get_action(sentiment: str) -> str:
     return {
-        "Critical": "🚨 IMMEDIATE escalation required — dispatch within 1 hour",
-        "Negative": "⚠️  High priority — respond within 24 hours",
-        "Neutral":  "📋 Standard queue — respond within 3 working days",
-        "Positive": "✅ Acknowledgement only — log and close"
-    }.get(sentiment, "📋 Standard queue")
+        "Critical": " IMMEDIATE escalation required — dispatch within 1 hour",
+        "Negative": "  High priority — respond within 24 hours",
+        "Neutral":  " Standard queue — respond within 3 working days",
+        "Positive": " Acknowledgement only — log and close"
+    }.get(sentiment, "Standard queue")
 
 # ── Endpoints ──────────────────────────────────────────────────
 @app.get("/")
