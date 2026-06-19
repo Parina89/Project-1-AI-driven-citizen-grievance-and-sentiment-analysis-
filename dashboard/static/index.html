@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Civic Sentinel AI - Grievance Command Center</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand-logo">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div class="brand-info">
+                    <h1>Civic Sentinel</h1>
+                    <span>Command Center AI</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="nav-item active" id="tab-overview" onclick="switchTab('overview')">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>Executive Overview</span>
+                    </li>
+                    <li class="nav-item" id="tab-sentiment" onclick="switchTab('sentiment')">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <span>Urgency & Sentiment</span>
+                    </li>
+                    <li class="nav-item" id="tab-classifier" onclick="switchTab('classifier')">
+                        <i class="fa-solid fa-brain"></i>
+                        <span>AI Classification</span>
+                    </li>
+                    <li class="nav-item" id="tab-department" onclick="switchTab('department')">
+                        <i class="fa-solid fa-building-flag"></i>
+                        <span>Department Deep-Dive</span>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="system-status">
+                    <span class="status-indicator online"></span>
+                    <div class="status-text">
+                        <p>API Status: ONLINE</p>
+                        <span id="api-latency">Latency: -- ms</span>
+                    </div>
+                </div>
+                <div class="model-status-pills">
+                    <span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> SVM</span>
+                    <span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> LR</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header Bar -->
+            <header class="main-header">
+                <div class="header-left">
+                    <h2 id="page-title">Executive Overview</h2>
+                    <p id="page-description" class="subtitle">Real-time civic monitoring and triage command console.</p>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-secondary btn-icon-only" onclick="refreshData()" title="Force Refresh">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </button>
+                    <div class="current-time" id="live-clock">--:--:--</div>
+                </div>
+            </header>
+
+            <!-- 1. Executive Overview View -->
+            <section id="view-overview" class="dashboard-view active-view">
+                <!-- KPI Cards Row -->
+                <div class="kpi-grid">
+                    <div class="kpi-card hover-lift">
+                        <div class="kpi-icon icon-blue">
+                            <i class="fa-solid fa-envelope-open-text"></i>
+                        </div>
+                        <div class="kpi-content">
+                            <h3>Total Grievances</h3>
+                            <div class="value-container">
+                                <span class="kpi-value" id="kpi-total">0</span>
+                                <span class="trend-indicator trend-up"><i class="fa-solid fa-caret-up"></i> 12.5%</span>
+                            </div>
+                            <p class="kpi-label">Cumulative volume in system</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card hover-lift">
+                        <div class="kpi-icon icon-red">
+                            <i class="fa-solid fa-bell"></i>
+                        </div>
+                        <div class="kpi-content">
+                            <h3>Critical Alerts</h3>
+                            <div class="value-container">
+                                <span class="kpi-value" id="kpi-critical">0</span>
+                                <span class="trend-indicator trend-down" id="kpi-critical-sub">Needs Attention</span>
+                            </div>
+                            <p class="kpi-label">Urgency level Critical or High</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card hover-lift">
+                        <div class="kpi-icon icon-green">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <div class="kpi-content">
+                            <h3>Resolved Cases</h3>
+                            <div class="value-container">
+                                <span class="kpi-value" id="kpi-resolved">0</span>
+                                <span class="trend-indicator trend-up" id="kpi-resolved-percent">0% Rate</span>
+                            </div>
+                            <p class="kpi-label">Routine/Low urgency processed</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card hover-lift">
+                        <div class="kpi-icon icon-yellow">
+                            <i class="fa-solid fa-heart-pulse"></i>
+                        </div>
+                        <div class="kpi-content">
+                            <h3>System Sentiment</h3>
+                            <div class="value-container">
+                                <span class="kpi-value" id="kpi-sentiment">0.00</span>
+                                <span class="trend-indicator" id="kpi-sentiment-label">Neutral</span>
+                            </div>
+                            <p class="kpi-label">Average VADER Compound score</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="chart-grid-2">
+                    <div class="card glass-card">
+                        <div class="card-header">
+                            <h4>Departmental Grievance Distribution</h4>
+                            <span class="card-subtitle">Volume per routed department</span>
+                        </div>
+                        <div class="card-body chart-container">
+                            <canvas id="chart-department-distribution"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="card glass-card">
+                        <div class="card-header">
+                            <h4>Grievance Volume & Sentiment Trends</h4>
+                            <span class="card-subtitle">Aggregated system activity timeline</span>
+                        </div>
+                        <div class="card-body chart-container">
+                            <canvas id="chart-activity-trend"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Grievance Feed -->
+                <div class="card glass-card full-width-card">
+                    <div class="card-header flex-header">
+                        <div>
+                            <h4>Real-Time Grievance Stream</h4>
+                            <span class="card-subtitle">Latest incoming citizen complaints with AI classification</span>
+                        </div>
+                        <span class="badge badge-pulse"><i class="fa-solid fa-signal"></i> LIVE FEED</span>
+                    </div>
+                    <div class="card-body table-responsive">
+                        <table class="data-table" id="table-overview-stream">
+                            <thead>
+                                <tr>
+                                    <th>Grievance ID</th>
+                                    <th>Timestamp</th>
+                                    <th>Complaint Narrative</th>
+                                    <th>Routed Department</th>
+                                    <th>Urgency</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Seeding dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. Sentiment & Urgency View -->
+            <section id="view-sentiment" class="dashboard-view">
+                <div class="chart-grid-2">
+                    <div class="card glass-card">
+                        <div class="card-header">
+                            <h4>Urgency Level Breakdown</h4>
+                            <span class="card-subtitle">Relative distribution of triage tiers</span>
+                        </div>
+                        <div class="card-body chart-container doughnut-wrapper">
+                            <canvas id="chart-urgency-donut"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="card glass-card">
+                        <div class="card-header">
+                            <h4>VADER Sentiment Distribution</h4>
+                            <span class="card-subtitle">Histogram of grievance compound scores</span>
+                        </div>
+                        <div class="card-body chart-container">
+                            <canvas id="chart-sentiment-distribution"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Priority Queue & Data Filter -->
+                <div class="card glass-card full-width-card">
+                    <div class="card-header flex-header">
+                        <div>
+                            <h4>Grievance Priority Queue</h4>
+                            <span class="card-subtitle">Filter, search, and escalate active grievances</span>
+                        </div>
+                        <div class="filter-bar">
+                            <div class="search-input">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="filter-search" placeholder="Search grievance text or ID..." oninput="applyGrievanceFilters()">
+                            </div>
+                            <select id="filter-department" onchange="applyGrievanceFilters()">
+                                <option value="">All Departments</option>
+                                <option value="Water Supply">Water Supply</option>
+                                <option value="Electricity">Electricity</option>
+                                <option value="Roads & Transport">Roads & Transport</option>
+                                <option value="Sanitation">Sanitation</option>
+                                <option value="Public Safety">Public Safety</option>
+                            </select>
+                            <select id="filter-urgency" onchange="applyGrievanceFilters()">
+                                <option value="">All Urgencies</option>
+                                <option value="Critical">Critical</option>
+                                <option value="High">High</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Low">Low</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body table-responsive">
+                        <table class="data-table" id="table-priority-queue">
+                            <thead>
+                                <tr>
+                                    <th onclick="sortGrievances('id')">ID <i class="fa-solid fa-sort"></i></th>
+                                    <th onclick="sortGrievances('timestamp')">Date/Time <i class="fa-solid fa-sort"></i></th>
+                                    <th>Narrative Preview</th>
+                                    <th onclick="sortGrievances('department')">Department <i class="fa-solid fa-sort"></i></th>
+                                    <th onclick="sortGrievances('urgency')">Urgency <i class="fa-solid fa-sort"></i></th>
+                                    <th onclick="sortGrievances('sentiment')">Sentiment <i class="fa-solid fa-sort"></i></th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="priority-queue-body">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. AI Classification Center View -->
+            <section id="view-classifier" class="dashboard-view">
+                <div class="classifier-layout">
+                    <!-- Left: Single Triage -->
+                    <div class="classifier-left">
+                        <div class="card glass-card">
+                            <div class="card-header">
+                                <h4>Single Grievance Analyzer</h4>
+                                <span class="card-subtitle">Input raw text to test NLP department and urgency classifier pipelines.</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="quick-templates">
+                                    <span class="template-label">Test Templates:</span>
+                                    <button class="btn-tag tag-red" onclick="fillDemo(0)">Critical</button>
+                                    <button class="btn-tag tag-orange" onclick="fillDemo(1)">High</button>
+                                    <button class="btn-tag tag-yellow" onclick="fillDemo(2)">Medium</button>
+                                    <button class="btn-tag tag-green" onclick="fillDemo(3)">Low</button>
+                                </div>
+                                <div class="form-group">
+                                    <textarea id="single-text-input" placeholder="Type or paste citizen grievance here (minimum 5 characters)..." rows="6"></textarea>
+                                </div>
+                                <div class="form-actions">
+                                    <label class="checkbox-container">
+                                        <input type="checkbox" id="single-save-db" checked>
+                                        <span class="checkmark"></span>
+                                        Add to Dashboard Queue
+                                    </label>
+                                    <button class="btn btn-primary" id="btn-analyze-single" onclick="analyzeSingleGrievance()">
+                                        <i class="fa-solid fa-microchip"></i> Run AI Triage
+                                    </button>
+                                </div>
+
+                                <!-- Result Panel -->
+                                <div class="analysis-results-card hidden" id="single-result-panel">
+                                    <h5>Analysis Predictions</h5>
+                                    
+                                    <div class="result-meters">
+                                        <div class="meter-box">
+                                            <span class="meter-label">Routed Department</span>
+                                            <span class="meter-val text-blue" id="res-dept">Electricity</span>
+                                            <span class="meter-sub" id="res-dept-conf">Confidence: 98%</span>
+                                        </div>
+                                        <div class="meter-box">
+                                            <span class="meter-label">Triage Urgency</span>
+                                            <span class="meter-val" id="res-urg">Critical</span>
+                                            <span class="meter-sub" id="res-urg-conf">Confidence: 94%</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="result-detail-list">
+                                        <div class="detail-item">
+                                            <span class="item-lbl">Sentiment Polarity (VADER)</span>
+                                            <div class="sentiment-slider-box">
+                                                <input type="range" min="-100" max="100" value="0" class="sentiment-range" id="res-sentiment-slider" disabled>
+                                                <div class="slider-labels">
+                                                    <span>Negative (-1.0)</span>
+                                                    <span id="res-sentiment-val">0.00</span>
+                                                    <span>Positive (+1.0)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="item-lbl">Preprocessed Tokens</span>
+                                            <div class="tokens-container" id="res-tokens">
+                                                <!-- Tokens chips -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Batch Triage & Models Health -->
+                    <div class="classifier-right">
+                        <!-- Batch Processor -->
+                        <div class="card glass-card">
+                            <div class="card-header">
+                                <h4>Batch Triage Processor</h4>
+                                <span class="card-subtitle">Analyze multiple complaints simultaneously using CSV upload or manual text entry.</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="batch-tabs">
+                                    <button class="batch-tab-btn active" id="btn-tab-csv" onclick="switchBatchTab('csv')">CSV Document Upload</button>
+                                    <button class="batch-tab-btn" id="btn-tab-manual" onclick="switchBatchTab('manual')">Multi-line Text Entry</button>
+                                </div>
+
+                                <!-- CSV Panel -->
+                                <div class="batch-panel active-panel" id="batch-panel-csv">
+                                    <div class="upload-drag-zone" id="drag-drop-zone">
+                                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                                        <p>Drag & Drop CSV file here or click to browse</p>
+                                        <span>CSV must contain a <strong>narrative</strong> or <strong>complaint</strong> column.</span>
+                                        <input type="file" id="batch-csv-file" accept=".csv" style="display:none;" onchange="handleCsvSelect(event)">
+                                    </div>
+                                    <div class="file-info-bar hidden" id="file-info-bar">
+                                        <i class="fa-solid fa-file-csv"></i>
+                                        <div class="file-details">
+                                            <span id="csv-filename">grievances.csv</span>
+                                            <span id="csv-filesize">-- KB</span>
+                                        </div>
+                                        <button class="btn-icon-only text-red" onclick="resetCsvUpload()"><i class="fa-solid fa-trash-can"></i></button>
+                                    </div>
+                                </div>
+
+                                <!-- Manual Entry Panel -->
+                                <div class="batch-panel" id="batch-panel-manual">
+                                    <div class="form-group">
+                                        <textarea id="batch-manual-input" placeholder="Paste multiple grievances here (one per line, minimum 5 characters per line)..." rows="6"></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="form-actions" style="margin-top: 15px;">
+                                    <label class="checkbox-container">
+                                        <input type="checkbox" id="batch-save-db">
+                                        <span class="checkmark"></span>
+                                        Append to Dashboard Database
+                                    </label>
+                                    <button class="btn btn-primary" id="btn-run-batch" onclick="runBatchAnalysis()">
+                                        <i class="fa-solid fa-gears"></i> Process Batch
+                                    </button>
+                                </div>
+
+                                <!-- Batch Results Panel -->
+                                <div class="batch-results-box hidden" id="batch-results-panel">
+                                    <h5>Batch Processing Complete</h5>
+                                    <div class="batch-stats-summary">
+                                        <div class="kpi-mini">
+                                            <span class="lbl">Processed</span>
+                                            <span class="val" id="batch-stat-total">0</span>
+                                        </div>
+                                        <div class="kpi-mini">
+                                            <span class="lbl">Critical/High</span>
+                                            <span class="val text-red" id="batch-stat-critical">0</span>
+                                        </div>
+                                        <div class="kpi-mini">
+                                            <span class="lbl">Avg Sentiment</span>
+                                            <span class="val" id="batch-stat-sentiment">0.00</span>
+                                        </div>
+                                    </div>
+                                    <div class="form-actions" style="margin-top: 15px; justify-content: flex-end;">
+                                        <button class="btn btn-secondary" onclick="downloadBatchResults()"><i class="fa-solid fa-download"></i> Download CSV Reports</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- System Health Status -->
+                        <div class="card glass-card" style="margin-top: 20px;">
+                            <div class="card-header">
+                                <h4>Model Pipeline Health</h4>
+                                <span class="card-subtitle">Live health parameters of the underlying AI classifiers</span>
+                            </div>
+                            <div class="card-body">
+                                <ul class="model-health-list">
+                                    <li>
+                                        <div class="health-meta">
+                                            <span class="health-name">Department Classifier (TF-IDF + SVM)</span>
+                                            <span class="health-desc">Active classification path</span>
+                                        </div>
+                                        <span class="badge badge-success" id="health-model-dept"><i class="fa-solid fa-circle-check"></i> Loaded</span>
+                                    </li>
+                                    <li>
+                                        <div class="health-meta">
+                                            <span class="health-name">Urgency Classifier (TF-IDF + LR)</span>
+                                            <span class="health-desc">Active urgency analysis path</span>
+                                        </div>
+                                        <span class="badge badge-success" id="health-model-urg"><i class="fa-solid fa-circle-check"></i> Loaded</span>
+                                    </li>
+                                    <li>
+                                        <div class="health-meta">
+                                            <span class="health-name">VADER Sentiment Intensity Analyzer</span>
+                                            <span class="health-desc">Word-based sentiment baseline and metrics</span>
+                                        </div>
+                                        <span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Connected</span>
+                                    </li>
+                                    <li>
+                                        <div class="health-meta">
+                                            <span class="health-name">DistilBERT Classifier (Deep Learning)</span>
+                                            <span class="health-desc">Contextual fallback path</span>
+                                        </div>
+                                        <span class="badge badge-yellow"><i class="fa-solid fa-circle-exclamation"></i> Using Fallback</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. Department Deep-Dive View -->
+            <section id="view-department" class="dashboard-view">
+                <!-- Selector Tabs -->
+                <div class="dept-selector-container">
+                    <button class="dept-tab active" id="dept-btn-water" onclick="selectDeepDiveDepartment('Water Supply')">
+                        <i class="fa-solid fa-faucet-drip"></i> Water Supply
+                    </button>
+                    <button class="dept-tab" id="dept-btn-electricity" onclick="selectDeepDiveDepartment('Electricity')">
+                        <i class="fa-solid fa-bolt"></i> Electricity
+                    </button>
+                    <button class="dept-tab" id="dept-btn-roads" onclick="selectDeepDiveDepartment('Roads & Transport')">
+                        <i class="fa-solid fa-road"></i> Roads & Transport
+                    </button>
+                    <button class="dept-tab" id="dept-btn-sanitation" onclick="selectDeepDiveDepartment('Sanitation')">
+                        <i class="fa-solid fa-trash-arrow-up"></i> Sanitation
+                    </button>
+                    <button class="dept-tab" id="dept-btn-safety" onclick="selectDeepDiveDepartment('Public Safety')">
+                        <i class="fa-solid fa-shield-halved"></i> Public Safety
+                    </button>
+                </div>
+
+                <!-- Metrics and Performance Grid -->
+                <div class="kpi-grid" style="margin-top: 20px;">
+                    <div class="kpi-card glass-card">
+                        <div class="kpi-content">
+                            <h3>Active Departmental Volume</h3>
+                            <div class="value-container">
+                                <span class="kpi-value" id="kpi-dept-volume">0</span>
+                                <span class="trend-indicator trend-neutral" id="kpi-dept-vol-pct">0% of total</span>
+                            </div>
+                            <p class="kpi-label">Active grievances under review</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card glass-card">
+                        <div class="kpi-content">
+                            <h3>Average Sentiment Rating</h3>
+                            <div class="value-container">
+                                <span class="kpi-value" id="kpi-dept-sentiment">0.00</span>
+                                <span class="trend-indicator" id="kpi-dept-sentiment-label">Neutral</span>
+                            </div>
+                            <p class="kpi-label">Valence rating of submissions</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card glass-card">
+                        <div class="kpi-content">
+                            <h3>Escalation Ratio</h3>
+                            <div class="value-container">
+                                <span class="kpi-value" id="kpi-dept-escalation">0%</span>
+                                <span class="trend-indicator trend-red" id="kpi-dept-escalated-count">0 High Tiers</span>
+                            </div>
+                            <p class="kpi-label">% of complaints flagged urgent</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card glass-card">
+                        <div class="kpi-content">
+                            <h3>Target Resolution Time</h3>
+                            <div class="value-container">
+                                <span class="kpi-value" id="kpi-dept-sla">24h</span>
+                                <span class="trend-indicator trend-green"><i class="fa-solid fa-circle-check"></i> On SLA</span>
+                            </div>
+                            <p class="kpi-label">Estimated SLA triage limit</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-grid-2" style="margin-top: 20px;">
+                    <!-- Department Activity Chart -->
+                    <div class="card glass-card">
+                        <div class="card-header">
+                            <h4 id="dept-activity-chart-title">Water Supply - Grievance Trends</h4>
+                            <span class="card-subtitle">Monthly frequency metrics</span>
+                        </div>
+                        <div class="card-body chart-container">
+                            <canvas id="chart-department-activity"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Department Urgency Mix -->
+                    <div class="card glass-card">
+                        <div class="card-header">
+                            <h4 id="dept-mix-chart-title">Water Supply - Urgency Mix</h4>
+                            <span class="card-subtitle">Urgency tier proportions for this department</span>
+                        </div>
+                        <div class="card-body chart-container doughnut-wrapper">
+                            <canvas id="chart-department-mix"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Department Specific Complaints Table -->
+                <div class="card glass-card full-width-card" style="margin-top: 20px;">
+                    <div class="card-header">
+                        <h4 id="dept-table-title">Water Supply - Active Grievance Stream</h4>
+                        <span class="card-subtitle">Direct records currently assigned to this department</span>
+                    </div>
+                    <div class="card-body table-responsive">
+                        <table class="data-table" id="table-dept-grievances">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Date/Time</th>
+                                    <th>Complaint narrative</th>
+                                    <th>Urgency</th>
+                                    <th>Sentiment</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-dept-grievances-body">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Grievance Details Modal (Glassmorphic Popup) -->
+    <div class="modal-overlay hidden" id="details-modal">
+        <div class="modal-card glass-modal">
+            <div class="modal-header">
+                <div>
+                    <h4 id="modal-g-id">Grievance ID: GRV-101</h4>
+                    <span id="modal-g-time" class="modal-subtitle">Submitted: 2026-06-10 14:02:11</span>
+                </div>
+                <button class="modal-close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section">
+                    <h6>Citizen Complaint Narrative</h6>
+                    <div class="modal-narrative-box" id="modal-g-narrative">
+                        <!-- Grievance narrative text -->
+                    </div>
+                </div>
+
+                <div class="modal-metadata-grid">
+                    <div class="meta-item">
+                        <span class="lbl">Assigned Department</span>
+                        <div class="meta-val-box">
+                            <span class="val text-blue" id="modal-g-dept">Water Supply</span>
+                            <span class="meta-conf" id="modal-g-dept-conf">Conf: 94%</span>
+                        </div>
+                    </div>
+                    <div class="meta-item">
+                        <span class="lbl">Assessed Urgency</span>
+                        <div class="meta-val-box">
+                            <span class="val" id="modal-g-urg">High</span>
+                            <span class="meta-conf" id="modal-g-urg-conf">Conf: 88%</span>
+                        </div>
+                    </div>
+                    <div class="meta-item">
+                        <span class="lbl">VADER Sentiment score</span>
+                        <span class="val" id="modal-g-sentiment">-0.720</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="lbl">System Status</span>
+                        <select id="modal-g-status-select" class="form-select-sm" onchange="updateGrievanceStatusFromModal()">
+                            <option value="Investigating">Investigating</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Resolved">Resolved</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
